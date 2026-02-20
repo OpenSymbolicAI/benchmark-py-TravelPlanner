@@ -1,0 +1,37 @@
+[project]
+name = "benchmark-py-travelplanner"
+version = "0.1.0"
+description = "TravelPlanner Benchmark: Multi-constraint travel planning agent evaluation"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "opensymbolicai-core",
+    "datasets>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+travelplanner-bench = "travelplanner_bench.runner:main"
+
+[tool.uv.sources]
+opensymbolicai-core = { path = "../core-py", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["travelplanner_bench"]
