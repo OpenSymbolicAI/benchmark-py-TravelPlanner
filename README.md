@@ -6,7 +6,7 @@ Even GPT-4 achieves only a **0.6% final pass rate** on this benchmark. The task 
 
 ## Results
 
-**OpenSymbolicAI achieves 100% on train and test, 99.4% on validation** — near-perfect scores on every commonsense and hard constraint check, with zero errors.
+**OpenSymbolicAI achieves 100% on train, 99.4% on validation, and 97.9% on the full 1,000-task test set** — near-perfect scores on every commonsense and hard constraint check, with zero errors and 100% delivery rate.
 
 ### Framework Comparison at a Glance
 
@@ -26,46 +26,46 @@ Same model, same tools, same evaluation — only the framework differs. Full ana
 
 | Level | Tasks | Delivery | Commonsense | Hard Constraints | Final Pass | Avg Time |
 |-------|------:|--------:|:-----------:|:----------------:|:----------:|--------:|
-| Easy | 15 | 100% | 100% | 100% | **100%** | 85.1s |
-| Medium | 15 | 100% | 100% | 100% | **100%** | 76.5s |
-| Hard | 15 | 100% | 100% | 100% | **100%** | 67.0s |
-| **All** | **45** | **100%** | **100%** | **100%** | **100%** | **76.2s** |
+| Easy | 15 | 100% | 100% | 100% | **100%** | — |
+| Medium | 15 | 100% | 100% | 100% | **100%** | — |
+| Hard | 15 | 100% | 100% | 100% | **100%** | — |
+| **All** | **45** | **100%** | **100%** | **100%** | **100%** | **52.6s** |
 
 ### Validation Split (180 tasks — full split)
 
 | Level | Tasks | Delivery | Commonsense | Hard Constraints | Final Pass | Avg Time |
 |-------|------:|--------:|:-----------:|:----------------:|:----------:|--------:|
-| Easy | 60 | 100% | 100% | 100% | **100%** | 56.2s |
-| Medium | 60 | 100% | 98.3% | 98.3% | **98.3%** | 56.2s |
-| Hard | 60 | 100% | 100% | 100% | **100%** | 56.2s |
-| **All** | **180** | **100%** | **99.4%** | **99.4%** | **99.4%** | **56.2s** |
+| Easy | 60 | 100% | 100% | 100% | **100%** | — |
+| Medium | 60 | 100% | 98.3% | 100% | **98.3%** | — |
+| Hard | 60 | 100% | 100% | 100% | **100%** | — |
+| **All** | **180** | **100%** | **99.4%** | **100%** | **99.4%** | **55.5s** |
 
-### Test Split (30 tasks — 10 per level)
+### Test Split (1,000 tasks — full split)
 
 | Level | Tasks | Delivery | Commonsense | Hard Constraints | Final Pass | Avg Time |
 |-------|------:|--------:|:-----------:|:----------------:|:----------:|--------:|
-| Easy | 10 | 100% | 100% | 100% | **100%** | 42.8s |
-| Medium | 10 | 100% | 100% | 100% | **100%** | 45.2s |
-| Hard | 10 | 100% | 100% | 100% | **100%** | 49.5s |
-| **All** | **30** | **100%** | **100%** | **100%** | **100%** | **45.8s** |
+| Easy | 348 | 100% | 98.6% | 100% | **98.6%** | — |
+| Medium | 333 | 100% | 97.0% | 100% | **97.0%** | — |
+| Hard | 319 | 100% | 98.1% | 100% | **98.1%** | — |
+| **All** | **1,000** | **100%** | **97.9%** | **100%** | **97.9%** | **52.4s** |
 
-All 13 constraint checks pass at 100% — no failures in any category:
+All hard constraint checks pass at 100% across all splits. Commonsense micro averages 99.7% on the full test set:
 
-| Constraint Category | Check | Pass Rate |
-|---|---|:-:|
-| Commonsense | Within Sandbox (entities exist in DB) | 100% |
-| Commonsense | Complete Information (no missing fields) | 100% |
-| Commonsense | Within Current City (activities match city) | 100% |
-| Commonsense | Reasonable City Route (origin → dest → origin) | 100% |
-| Commonsense | Diverse Restaurants (no duplicates) | 100% |
-| Commonsense | Diverse Attractions (no duplicates) | 100% |
-| Commonsense | Non-Conflicting Transport (single mode) | 100% |
-| Commonsense | Valid Accommodation (minimum nights) | 100% |
-| Hard | Budget (total cost within limit) | 100% |
-| Hard | Room Rule (house rules compliance) | 100% |
-| Hard | Room Type (entire home/private/shared) | 100% |
-| Hard | Cuisine (all required cuisines covered) | 100% |
-| Hard | Transportation (forbidden mode not used) | 100% |
+| Constraint Category | Check | Train | Validation | Test (1,000) |
+|---|---|:-:|:-:|:-:|
+| Commonsense | Within Sandbox (entities exist in DB) | 100% | 100% | 100% |
+| Commonsense | Complete Information (no missing fields) | 100% | 100% | 99.9% |
+| Commonsense | Within Current City (activities match city) | 100% | 100% | 99.6% |
+| Commonsense | Reasonable City Route (origin → dest → origin) | 100% | 100% | 99.5% |
+| Commonsense | Diverse Restaurants (no duplicates) | 100% | 100% | 98.9% |
+| Commonsense | Diverse Attractions (no duplicates) | 100% | 100% | 100% |
+| Commonsense | Non-Conflicting Transport (single mode) | 100% | 100% | 100% |
+| Commonsense | Valid Accommodation (minimum nights) | 100% | 100% | 100% |
+| Hard | Budget (total cost within limit) | 100% | 100% | 100% |
+| Hard | Room Rule (house rules compliance) | 100% | 100% | 100% |
+| Hard | Room Type (entire home/private/shared) | 100% | 100% | 100% |
+| Hard | Cuisine (all required cuisines covered) | 100% | 100% | 100% |
+| Hard | Transportation (forbidden mode not used) | 100% | 100% | 100% |
 
 ### Comparison with Published Baselines
 
@@ -77,9 +77,9 @@ Results from the [TravelPlanner paper](https://arxiv.org/abs/2402.01622) (ICML 2
 | GPT-4 | 100% | 6.4% | 3.7% | 0.6% |
 | GPT-4-Turbo | 99.4% | 11.7% | 4.6% | 4.4% |
 | Gemini 1.5 Pro | 98.3% | 7.8% | 4.5% | 3.9% |
-| **OpenSymbolicAI (ours)** | **100%** | **100%** | **100%** | **100%** |
+| **OpenSymbolicAI (ours)** | **100%** | **99.4%** | **100%** | **99.4%** |
 
-> Model: `gpt-oss-120b` via Fireworks AI. Each task uses 1 retrieval iteration + 1 assembly iteration (2 LLM calls total). No retries needed. Train (45 tasks) and validation (180 tasks) are full splits; test split sampled 10 tasks per difficulty level (30 total).
+> Model: `gpt-oss-120b` via Fireworks AI. Each task uses 1 retrieval iteration + 1 assembly iteration (2 LLM calls total). No retries needed. All splits are full: train (45), validation (180), test (1,000). The 0.6% validation miss is a single commonsense constraint (within_current_city) on one medium task. Hard constraints are 100% across all 1,225 tasks.
 
 ## What is TravelPlanner?
 
@@ -411,7 +411,7 @@ logs/compare_<timestamp>/
 
 | Framework | Retrieval Phase | Assembly Phase | Post-processing |
 |-----------|----------------|----------------|-----------------|
-| **OpenSymbolicAI** | GoalSeeking agent iteratively calls search primitives via LLM-generated Python code | DesignExecute agent generates plan via LLM-generated Python code | Shared 7-phase `_fill_missing_fields` |
+| **OpenSymbolicAI** | GoalSeeking agent iteratively calls search primitives via LLM-generated Python code | DesignExecute agent generates plan via LLM-generated Python code | Shared 8-phase `_fill_missing_fields` |
 | **LangChain** | `create_react_agent` (langgraph) with 6 search tools | Single structured LLM call to generate plan JSON | Same shared post-processing |
 | **CrewAI** | Sequential Crew: Researcher agent with search tools | Planner agent receives research context, outputs plan JSON | Same shared post-processing |
 
