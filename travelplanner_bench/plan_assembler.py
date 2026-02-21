@@ -42,7 +42,7 @@ from travelplanner_bench.models import (
     TravelPlannerTask,
     ValidTransport,
 )
-from travelplanner_bench.utils import parse_cost
+from travelplanner_bench.utils import normalize_name, parse_cost, strip_city_suffix
 
 log = logging.getLogger(__name__)
 
@@ -1188,12 +1188,16 @@ class PlanAssemblerAgent(DesignExecute):
         # --- Phase 1b: Fix transport mode conflicts ---
         self._fix_transport_conflicts(plan, gathered)
 
+        # --- Phase 1c: Fix return-to-origin on last day ---
+        self._fix_return_to_origin(plan, gathered, task)
+
         # --- Phase 2: Clear last/return day ---
         self._clear_return_day(plan, task)
 
-        # --- Phase 3: Fix meals and attractions referencing wrong city ---
+        # --- Phase 3: Fix meals, attractions, and accommodation referencing wrong city ---
         self._fix_wrong_city_meals(plan, gathered, task)
         self._fix_wrong_city_attractions(plan, gathered, task)
+        self._fix_wrong_city_accommodation(plan, gathered, task)
 
         # --- Phase 4: Fill missing meals and accommodation ---
         required_cuisine_set: set[str] = set()
@@ -1240,22 +1244,24 @@ class PlanAssemblerAgent(DesignExecute):
             # Skip Day 1 breakfast: arrival-day convention (prepare_meals leaves
             # it empty, agent's budget doesn't include it, and
             # check_complete_info only requires filled >= 2 on day 1).
-            for meal_key in MEAL_KEYS:
-                if day_num == 1 and meal_key == BREAKFAST:
-                    continue
-                val = day.get(meal_key, "-").strip()
-                if not val or val == "-":
-                    rest = self._pick_unused_restaurant(
-                        city_restaurants,
-                        used_restaurants,
-                        preferred_cuisines=uncovered if uncovered else None,
-                    )
-                    if rest:
-                        day[meal_key] = f"{rest.name}, {city}"
-                        used_restaurants.add(rest.name.lower())
-                        # Update uncovered set
-                        if uncovered:
-                            uncovered -= rest.cuisine_set()
+            # Skip last day (return day): _clear_return_day already set meals to "-".
+            if day_num != task.days:
+                for meal_key in MEAL_KEYS:
+                    if day_num == 1 and meal_key == BREAKFAST:
+                        continue
+                    val = day.get(meal_key, "-").strip()
+                    if not val or val == "-":
+                        rest = self._pick_unused_restaurant(
+                            city_restaurants,
+                            used_restaurants,
+                            preferred_cuisines=uncovered if uncovered else None,
+                        )
+                        if rest:
+                            day[meal_key] = f"{rest.name}, {city}"
+                            used_restaurants.add(rest.name.lower())
+                            # Update uncovered set
+                            if uncovered:
+                                uncovered -= rest.cuisine_set()
 
             # Fill missing accommodation (skip last day)
             if day_num != task.days:
@@ -1270,10 +1276,13 @@ class PlanAssemblerAgent(DesignExecute):
         if required_cuisine_set:
             self._ensure_cuisine_coverage(plan, gathered, task, required_cuisine_set)
 
-        # --- Phase 6: Deduplicate attractions ---
+        # --- Phase 6: Deduplicate restaurants across cities ---
+        self._deduplicate_restaurants(plan, gathered)
+
+        # --- Phase 7: Deduplicate attractions ---
         self._deduplicate_attractions(plan, gathered)
 
-        # --- Phase 7: Budget guard ---
+        # --- Phase 8: Budget guard ---
         # If a budget is specified, verify total cost.  When over-budget,
         # remove the most-expensive *expendable* meals (those not solely
         # covering a required cuisine) until within budget.
@@ -1786,6 +1795,77 @@ class PlanAssemblerAgent(DesignExecute):
                 else:
                     day[TRANSPORTATION] = f"Self-driving, from {origin} to {dest}"
 
+    def _fix_return_to_origin(
+        self,
+        plan: list[dict[str, Any]],
+        gathered: GatheredData,
+        task: TravelPlannerTask,
+    ) -> None:
+        """Ensure the last day returns to the trip origin.
+
+        The evaluation requires the last day to be 'from [last_city] to [origin]'.
+        If the LLM routed to the destination state instead, fix it.
+        Also normalizes the origin city name to match task.org exactly.
+        """
+        if not plan:
+            return
+
+        def _fuzzy_city_eq(a: str, b: str) -> bool:
+            """Compare city names leniently (ignore periods, case, whitespace)."""
+            a_clean = re.sub(r"[.\s]+", " ", a.lower()).strip()
+            b_clean = re.sub(r"[.\s]+", " ", b.lower()).strip()
+            return a_clean == b_clean
+
+        # Fix first day's origin city name to match task.org exactly
+        first_day = plan[0]
+        first_cc = first_day.get(CURRENT_CITY, "")
+        first_match = re.match(r"from\s+(.+?)\s+to\s+(.+)", first_cc, re.IGNORECASE)
+        if first_match:
+            first_origin = first_match.group(1).strip()
+            first_dest = first_match.group(2).strip()
+            origin = task.org.strip()
+            if _fuzzy_city_eq(first_origin, origin) and first_origin != origin:
+                first_day[CURRENT_CITY] = f"from {origin} to {first_dest}"
+                log.info("FIX_RETURN: normalized first day origin %r → %r", first_origin, origin)
+
+        last_day = plan[-1]
+        current = last_day.get(CURRENT_CITY, "")
+        match = re.match(r"from\s+(.+?)\s+to\s+(.+)", current, re.IGNORECASE)
+        if not match:
+            return
+
+        dest = match.group(2).strip()
+        from_city = match.group(1).strip()
+        origin = task.org.strip()
+
+        # Check if destination matches origin (exact or fuzzy)
+        if _fuzzy_city_eq(dest, origin):
+            # Destination matches but may have different formatting (e.g., "St Louis" vs "St. Louis")
+            if dest != origin:
+                last_day[CURRENT_CITY] = f"from {from_city} to {origin}"
+                log.info("FIX_RETURN: normalized origin name %r → %r", dest, origin)
+            return
+
+        # Last day doesn't return to origin — fix it
+        log.info(
+            "FIX_RETURN: last day goes to %r instead of %r — fixing",
+            dest, origin,
+        )
+        last_day[CURRENT_CITY] = f"from {from_city} to {origin}"
+
+        # Fix transport string
+        transport = last_day.get(TRANSPORTATION, NO_DATA).strip()
+        if transport and transport != "-":
+            # Replace destination in transport string
+            transport_match = re.search(
+                r"from\s+(.+?)\s+to\s+(.+?)(?:,|$)", transport
+            )
+            if transport_match:
+                old_dest = transport_match.group(2).strip()
+                last_day[TRANSPORTATION] = transport.replace(
+                    f"to {old_dest}", f"to {origin}", 1
+                )
+
     @staticmethod
     def _clear_return_day(
         plan: list[dict[str, Any]], task: TravelPlannerTask
@@ -1933,6 +2013,112 @@ class PlanAssemblerAgent(DesignExecute):
 
             if changed:
                 day[ATTRACTION] = ";".join(new_parts) if new_parts else "-"
+
+    def _fix_wrong_city_accommodation(
+        self,
+        plan: list[dict[str, Any]],
+        gathered: GatheredData,
+        task: TravelPlannerTask,
+    ) -> None:
+        """Fix accommodation that references the wrong city on transit days.
+
+        On "from X to Y" days, the evaluation expects accommodation in city Y.
+        Replace any accommodation whose city suffix doesn't match.
+        """
+        for day in plan:
+            current = day.get(CURRENT_CITY, "")
+            if not current or current.strip() == "-":
+                continue
+            match = re.match(r"from\s+(.+?)\s+to\s+(.+)", current, re.IGNORECASE)
+            if not match:
+                continue  # Only fix transit days
+
+            expected_city_raw = match.group(2).strip()
+            expected_city = self._match_gathered_city(expected_city_raw, gathered)
+
+            acc_val = day.get(ACCOMMODATION, NO_DATA).strip()
+            if not acc_val or acc_val == "-":
+                continue
+            if "," not in acc_val:
+                continue
+
+            acc_city = acc_val.rsplit(",", 1)[1].strip()
+            if acc_city.lower() == expected_city.lower():
+                continue
+
+            # Wrong city — find an accommodation in the expected city
+            city_accs = self._find_city_data(gathered.accommodations, expected_city)
+            if city_accs:
+                best = min(city_accs, key=lambda a: a.price)
+                day[ACCOMMODATION] = f"{best.name}, {expected_city}"
+                log.info(
+                    "FIX_ACC_CITY: replaced %r with %r on day %d",
+                    acc_val, day[ACCOMMODATION], day.get("days", 0),
+                )
+
+    def _deduplicate_restaurants(
+        self,
+        plan: list[dict[str, Any]],
+        gathered: GatheredData,
+    ) -> None:
+        """Ensure no restaurant base name appears more than once across all days.
+
+        The evaluation strips city suffixes before comparing, so "Subway, Chicago"
+        and "Subway, Rockford" are considered duplicates.  When a duplicate is
+        found, replace it with an unused restaurant from the same city.
+        """
+        seen_base: set[str] = set()  # normalized base names already used
+        used_full: set[str] = set()  # lowercase full names already used
+
+        # First pass: collect all used base names
+        for day in plan:
+            for mk in MEAL_KEYS:
+                val = day.get(mk, NO_DATA).strip()
+                if not val or val == "-":
+                    continue
+                base = strip_city_suffix(val).strip()
+                key = normalize_name(base)
+                seen_base.add(key)
+                used_full.add(val.rsplit(",", 1)[0].strip().lower())
+
+        # Second pass: detect and replace duplicates (process in order)
+        seen_base.clear()
+        for day in plan:
+            city = self._infer_stay_city(day, self._task, gathered) if hasattr(self, '_task') else None
+            for mk in MEAL_KEYS:
+                val = day.get(mk, NO_DATA).strip()
+                if not val or val == "-":
+                    continue
+                base = strip_city_suffix(val).strip()
+                key = normalize_name(base)
+                if key in seen_base:
+                    # Duplicate — find a replacement from the same city
+                    if city:
+                        city_restaurants = self._find_city_data(gathered.restaurants, city)
+                        replacement = None
+                        for r in city_restaurants:
+                            r_key = normalize_name(r.name)
+                            if r_key not in seen_base and r.name.lower() not in used_full:
+                                replacement = r
+                                break
+                        if replacement:
+                            day[mk] = f"{replacement.name}, {city}"
+                            new_key = normalize_name(replacement.name)
+                            seen_base.add(new_key)
+                            used_full.add(replacement.name.lower())
+                            log.info(
+                                "DEDUP_RESTAURANT: replaced %r with %r on day %d",
+                                val, day[mk], day.get("days", 0),
+                            )
+                            continue
+                    # No replacement found — clear the slot
+                    day[mk] = "-"
+                    log.info(
+                        "DEDUP_RESTAURANT: cleared duplicate %r on day %d (no replacement)",
+                        val, day.get("days", 0),
+                    )
+                else:
+                    seen_base.add(key)
 
     def _deduplicate_attractions(
         self,
