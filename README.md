@@ -10,7 +10,7 @@ Even GPT-4 achieves only a **0.6% final pass rate** on this benchmark. The task 
 
 ### Framework Comparison at a Glance
 
-Same model, same tools, same evaluation — only the framework differs. Full analysis in **[COMPARISON.md](COMPARISON.md)**.
+Same model, same tools, same evaluation — only the framework differs. Full analysis in **[COMPARISON.md](COMPARISON.md)**. For multi-model results across 11 LLMs and 4 providers, see **[MODEL-LANDSCAPE.md](MODEL-LANDSCAPE.md)**.
 
 | | OpenSymbolicAI | LangChain | CrewAI |
 |---|:-:|:-:|:-:|
