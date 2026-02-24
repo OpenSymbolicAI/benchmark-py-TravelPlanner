@@ -48,3 +48,6 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["travelplanner_bench"]
+
+[tool.uv.sources]
+opensymbolicai-core = { path = "../core-py" }

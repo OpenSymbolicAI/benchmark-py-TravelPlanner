@@ -216,6 +216,24 @@ uv run travelplanner-bench --model gpt-oss-120b --provider fireworks -n 10
 uv run travelplanner-bench --model llama3 --provider ollama -n 5
 ```
 
+### Observability
+
+Send structured traces to the local observability stack for per-span inspection of planning, execution, and goal-seeking iterations:
+
+```bash
+# Start the observability stack (collector + dashboard)
+cd /path/to/OpenSymbolicAI/observability && docker compose up
+
+# Run with tracing enabled
+uv run travelplanner-bench --model gpt-oss-120b --provider fireworks -n 5 --observe
+```
+
+Traces are sent to `http://localhost:8100/events` and viewable in the dashboard at `http://localhost:8101`. Each task emits traces for all three agent layers:
+
+- **TravelPlannerAgent** — top-level GoalSeeking orchestrator spans
+- **RetrievalAgent** — GoalSeeking iteration spans (search primitives, evaluations)
+- **PlanAssemblerAgent** — DesignExecute spans (plan generation, execution steps)
+
 ### CLI Reference
 
 ```
@@ -233,6 +251,7 @@ Options:
   -p, --parallel N                                     Parallel workers (default: 3)
   --shuffle                                            Shuffle tasks
   --seed SEED                                          Random seed (default: 42)
+  --observe                                            Enable observability traces (http://localhost:8100)
 ```
 
 ## Output

@@ -31,6 +31,7 @@ from opensymbolicai.models import (
     Iteration,
     OrchestrationResult,
 )
+from opensymbolicai.observability import ObservabilityConfig
 
 from travelplanner_bench.models import (
     GatheredData,
@@ -54,13 +55,18 @@ class TravelPlannerAgent(GoalSeeking):
         self,
         llm: LLMConfig | LLM,
         max_iterations: int = 5,
+        observability: ObservabilityConfig | None = None,
     ) -> None:
         super().__init__(
             llm=llm,
             name="TravelPlannerAgent",
             description="Travel planning orchestrator with information gathering and constraint-solving phases.",
-            config=GoalSeekingConfig(max_iterations=max_iterations),
+            config=GoalSeekingConfig(
+                max_iterations=max_iterations,
+                observability=observability,
+            ),
         )
+        self._observability = observability
         self._current_task: TravelPlannerTask | None = None
         self._db: ReferenceDatabase | None = None
         self._submitted_plan: list[dict[str, Any]] | None = None
@@ -99,6 +105,7 @@ class TravelPlannerAgent(GoalSeeking):
         retrieval = RetrievalAgent(
             llm=self._llm_config if hasattr(self, "_llm_config") else self._llm,
             db=self._db,
+            observability=self._observability,
         )
         gathered = retrieval.gather(self._current_task)
         self._cached_gathered = gathered
@@ -132,6 +139,7 @@ class TravelPlannerAgent(GoalSeeking):
         for attempt in range(max_attempts):
             assembler = PlanAssemblerAgent(
                 llm=self._llm_config if hasattr(self, "_llm_config") else self._llm,
+                observability=self._observability,
             )
             plan = assembler.assemble_plan(
                 gathered_data, self._current_task, previous_error=last_error

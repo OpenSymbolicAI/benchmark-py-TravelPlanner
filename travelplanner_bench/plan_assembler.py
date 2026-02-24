@@ -16,6 +16,7 @@ from opensymbolicai.blueprints.design_execute import DesignExecute
 from opensymbolicai.core import decomposition, primitive
 from opensymbolicai.llm import LLM, LLMConfig
 from opensymbolicai.models import DesignExecuteConfig
+from opensymbolicai.observability import ObservabilityConfig
 
 from travelplanner_bench.constants import (
     ACCOMMODATION,
@@ -54,6 +55,7 @@ class PlanAssemblerAgent(DesignExecute):
         self,
         llm: LLMConfig | LLM,
         max_plan_retries: int = 3,
+        observability: ObservabilityConfig | None = None,
     ) -> None:
         super().__init__(
             llm=llm,
@@ -64,6 +66,7 @@ class PlanAssemblerAgent(DesignExecute):
                 max_loop_iterations=50,
                 max_total_primitive_calls=200,
                 multi_turn=True,
+                observability=observability,
             ),
         )
         self._submitted_plan: list[dict[str, Any]] | None = None

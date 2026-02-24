@@ -315,7 +315,7 @@ requires-dist = [
     { name = "langgraph", marker = "extra == 'langchain'", specifier = ">=0.2.0" },
     { name = "litellm", specifier = ">=1.81.13" },
     { name = "matplotlib", specifier = ">=3.10.8" },
-    { name = "opensymbolicai-core" },
+    { name = "opensymbolicai-core", directory = "../core-py" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
@@ -2172,15 +2172,31 @@ wheels = [
 
 [[package]]
 name = "opensymbolicai-core"
-version = "0.4.1"
-source = { registry = "https://pypi.org/simple" }
+version = "0.5.0"
+source = { directory = "../core-py" }
 dependencies = [
     { name = "pydantic" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a7/11/2760a57b590fc344fd3f954866ed9d4d1afc7bc2e2edfa23b38f2bebc79d/opensymbolicai_core-0.4.1.tar.gz", hash = "sha256:4232c943977f166ef8fa76f3b1e2bf88145fc6b3b0352b5cdd706a38ed932603", size = 71715, upload-time = "2026-02-18T05:32:38.453Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a6/37/df68535d0514920256b29326f42371425da794326bcf3c9f9fe26782f02a/opensymbolicai_core-0.4.1-py3-none-any.whl", hash = "sha256:ec440c9206a4608a95966e59a01b9394dbc491b94cdf3d91b378427b4c4eff8e", size = 48505, upload-time = "2026-02-18T05:32:36.929Z" },
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.0" },
+    { name = "tqdm", specifier = ">=4.67.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "build", specifier = ">=1.4.0" },
+    { name = "mkdocs-material", specifier = ">=9.7.1" },
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.2" },
+    { name = "mypy", specifier = ">=1.0" },
+    { name = "pre-commit", specifier = ">=4.5.1" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-cov", specifier = ">=4.0" },
+    { name = "python-semantic-release", specifier = ">=10.5.3" },
+    { name = "ruff", specifier = ">=0.9" },
+    { name = "twine", specifier = ">=6.2.0" },
 ]
 
 [[package]]

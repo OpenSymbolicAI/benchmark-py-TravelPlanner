@@ -18,6 +18,7 @@ from opensymbolicai.models import (
     GoalEvaluation,
     GoalSeekingConfig,
 )
+from opensymbolicai.observability import ObservabilityConfig
 
 from travelplanner_bench.constants import SELF_DRIVING
 from travelplanner_bench.models import (
@@ -51,12 +52,16 @@ class RetrievalAgent(GoalSeeking):
         llm: LLMConfig | LLM,
         db: ReferenceDatabase,
         max_iterations: int = 5,
+        observability: ObservabilityConfig | None = None,
     ) -> None:
         super().__init__(
             llm=llm,
             name="RetrievalAgent",
             description="Iterative travel data gatherer using reference database search primitives.",
-            config=GoalSeekingConfig(max_iterations=max_iterations),
+            config=GoalSeekingConfig(
+                max_iterations=max_iterations,
+                observability=observability,
+            ),
         )
         self._db = db
 

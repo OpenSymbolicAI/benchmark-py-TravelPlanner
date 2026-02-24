@@ -7,6 +7,7 @@ import json
 import logging
 import sys
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,13 +33,18 @@ def _run_single_task(
     task: TravelPlannerTask,
     llm_config: Any,  # LLMConfig - keep Any to avoid opensymbolicai import at module level
     max_iterations: int,
+    obs_config: Any | None = None,  # ObservabilityConfig
 ) -> dict[str, Any]:
     """Run a single TravelPlanner task with the OpenSymbolicAI agent."""
     from travelplanner_bench.agent import TravelPlannerAgent
     from travelplanner_bench.evaluation import evaluate_plan
     from travelplanner_bench.tools import ReferenceDatabase
 
-    agent = TravelPlannerAgent(llm=llm_config, max_iterations=max_iterations)
+    agent = TravelPlannerAgent(
+        llm=llm_config,
+        max_iterations=max_iterations,
+        observability=obs_config,
+    )
 
     start = time.perf_counter()
     try:
@@ -227,6 +233,7 @@ def run_benchmark(
     shuffle: bool = False,
     seed: int = 42,
     task_ids: list[str] | None = None,
+    observe: bool = False,
 ) -> dict[str, Any]:
     """Run the full TravelPlanner benchmark."""
     from dotenv import load_dotenv
@@ -256,6 +263,27 @@ def run_benchmark(
 
     run_dir = _create_run_dir(model)
     print(f"Logs: {run_dir}")
+
+    # Set up observability (send traces to local collector)
+    obs_config = None
+    if observe:
+        from opensymbolicai.observability import ObservabilityConfig
+
+        session_id = uuid.uuid4().hex
+        collector_url = "http://localhost:8100/events"
+        obs_config = ObservabilityConfig(
+            enabled=True,
+            collector_url=collector_url,
+            session_id=session_id,
+            capture_llm_prompts=True,
+            capture_llm_responses=True,
+            capture_execution_steps=True,
+            capture_plan_source=True,
+            tags={"benchmark": "travelplanner", "split": split, "model": model},
+        )
+        print(f"Traces: {collector_url}")
+        print(f"Session: {session_id}")
+        print("Dashboard: http://localhost:8101")
 
     # Set up file logging
     agent_log_path = run_dir / "agent_debug.log"
@@ -295,7 +323,7 @@ def run_benchmark(
     if workers <= 1:
         for i, task in enumerate(tasks, 1):
             print(f"\n[{i}/{total}] {task.query[:80]}...")
-            result = _run_single_task(task, llm_config, max_iterations)
+            result = _run_single_task(task, llm_config, max_iterations, obs_config)
             results.append(result)
             _write_task_log(run_dir, i, result)
             status = "PASS" if result.get("final_pass") else "FAIL"
@@ -312,7 +340,7 @@ def run_benchmark(
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
             for i, task in enumerate(tasks, 1):
-                future = executor.submit(_run_single_task, task, llm_config, max_iterations)
+                future = executor.submit(_run_single_task, task, llm_config, max_iterations, obs_config)
                 futures_map[future] = (i, task)
 
             for future in as_completed(futures_map):
@@ -400,14 +428,14 @@ Examples:
     )
     parser.add_argument(
         "--model",
-        required=True,
-        help="Model name/ID (e.g., gpt-4o, gpt-oss-120b, claude-sonnet-4-20250514)",
+        default="gpt-oss-120b",
+        help="Model name/ID (default: gpt-oss-120b)",
     )
     parser.add_argument(
         "--provider",
         choices=["ollama", "openai", "anthropic", "fireworks", "groq"],
-        required=True,
-        help="LLM provider",
+        default="fireworks",
+        help="LLM provider (default: fireworks)",
     )
     parser.add_argument(
         "--split",
@@ -456,6 +484,12 @@ Examples:
         default=None,
         help="Comma-separated task IDs to run (e.g., tp_0003,tp_0010,tp_0015)",
     )
+    parser.add_argument(
+        "--observe",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable observability traces (default: enabled, use --no-observe to disable)",
+    )
     args = parser.parse_args()
 
     task_ids = args.task_ids.split(",") if args.task_ids else None
@@ -471,6 +505,7 @@ Examples:
         shuffle=args.shuffle,
         seed=args.seed,
         task_ids=task_ids,
+        observe=args.observe,
     )
     return 0
 
