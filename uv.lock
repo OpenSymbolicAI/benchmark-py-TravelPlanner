@@ -315,7 +315,7 @@ requires-dist = [
     { name = "langgraph", marker = "extra == 'langchain'", specifier = ">=0.2.0" },
     { name = "litellm", specifier = ">=1.81.13" },
     { name = "matplotlib", specifier = ">=3.10.8" },
-    { name = "opensymbolicai-core", directory = "../core-py" },
+    { name = "opensymbolicai-core", specifier = ">=0.6.1" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0" },
@@ -2172,31 +2172,16 @@ wheels = [
 
 [[package]]
 name = "opensymbolicai-core"
-version = "0.5.0"
-source = { directory = "../core-py" }
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
+    { name = "python-dotenv" },
     { name = "tqdm" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "pydantic", specifier = ">=2.0" },
-    { name = "tqdm", specifier = ">=4.67.1" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "build", specifier = ">=1.4.0" },
-    { name = "mkdocs-material", specifier = ">=9.7.1" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.2" },
-    { name = "mypy", specifier = ">=1.0" },
-    { name = "pre-commit", specifier = ">=4.5.1" },
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "pytest-cov", specifier = ">=4.0" },
-    { name = "python-semantic-release", specifier = ">=10.5.3" },
-    { name = "ruff", specifier = ">=0.9" },
-    { name = "twine", specifier = ">=6.2.0" },
+sdist = { url = "https://files.pythonhosted.org/packages/ba/39/b3873e8db7ce49fcf4a253abc5cf63be8051d5a4299e366603d695d42f9b/opensymbolicai_core-0.6.1.tar.gz", hash = "sha256:3e3f4a99d1b0360c60bc5ff0dda877e1c45190c896e8196c1870a3ffb1afb51b", size = 104700, upload-time = "2026-03-01T06:57:37.187Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/04/e7/2e2328162313c6eaa74840e584ed5ee8112046b3ba55e41ba803df114723/opensymbolicai_core-0.6.1-py3-none-any.whl", hash = "sha256:a7b28db79f43f7157f21384a3ce8b4831d8528c3c50a3ed98b01114e18125188", size = 70146, upload-time = "2026-03-01T06:57:35.858Z" },
 ]
 
 [[package]]
@@ -3056,11 +3041,11 @@ wheels = [
 
 [[package]]
 name = "python-dotenv"
-version = "1.1.1"
+version = "1.2.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f6/b0/4bc07ccd3572a2f9df7e6782f52b0c6c90dcbb803ac4a167702d7d0dfe1e/python_dotenv-1.1.1.tar.gz", hash = "sha256:a8a6399716257f45be6a007360200409fce5cda2661e3dec71d23dc15f6189ab", size = 41978, upload-time = "2025-06-24T04:21:07.341Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f0/26/19cadc79a718c5edbec86fd4919a6b6d3f681039a2f6d66d14be94e75fb9/python_dotenv-1.2.1.tar.gz", hash = "sha256:42667e897e16ab0d66954af0e60a9caa94f0fd4ecf3aaf6d2d260eec1aa36ad6", size = 44221, upload-time = "2025-10-26T15:12:10.434Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/ed/539768cf28c661b5b068d66d96a2f155c4971a5d55684a514c1a0e0dec2f/python_dotenv-1.1.1-py3-none-any.whl", hash = "sha256:31f23644fe2602f88ff55e1f5c79ba497e01224ee7737937930c448e4d0e24dc", size = 20556, upload-time = "2025-06-24T04:21:06.073Z" },
+    { url = "https://files.pythonhosted.org/packages/14/1b/a298b06749107c305e1fe0f814c6c74aea7b2f1e10989cb30f544a1b3253/python_dotenv-1.2.1-py3-none-any.whl", hash = "sha256:b81ee9561e9ca4004139c6cbba3a238c32b03e4894671e181b671e8cb8425d61", size = 21230, upload-time = "2025-10-26T15:12:09.109Z" },
 ]
 
 [[package]]
