@@ -5,17 +5,23 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 import time
-import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
+
 from travelplanner_bench.models import IterationLog, TravelPlannerResult, TravelPlannerTask
 
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
 LOGS_DIR = Path(__file__).parent.parent / "logs"
+COLLECTOR_URL = os.environ.get("OBSERVABILITY_COLLECTOR_URL", "https://api.axiomira.com/api/events")
+OBSERVABILITY_API_KEY = os.environ.get("OBSERVABILITY_API_KEY", "")
 
 log = logging.getLogger(__name__)
 
@@ -264,26 +270,22 @@ def run_benchmark(
     run_dir = _create_run_dir(model)
     print(f"Logs: {run_dir}")
 
-    # Set up observability (send traces to local collector)
+    # Set up observability (send traces to collector)
     obs_config = None
     if observe:
         from opensymbolicai.observability import ObservabilityConfig
 
-        session_id = uuid.uuid4().hex
-        collector_url = "http://localhost:8100/events"
         obs_config = ObservabilityConfig(
             enabled=True,
-            collector_url=collector_url,
-            session_id=session_id,
+            collector_url=COLLECTOR_URL,
+            collector_headers={"X-API-Key": OBSERVABILITY_API_KEY} if OBSERVABILITY_API_KEY else {},
             capture_llm_prompts=True,
             capture_llm_responses=True,
             capture_execution_steps=True,
             capture_plan_source=True,
             tags={"benchmark": "travelplanner", "split": split, "model": model},
         )
-        print(f"Traces: {collector_url}")
-        print(f"Session: {session_id}")
-        print("Dashboard: http://localhost:8101")
+        print(f"Traces: {COLLECTOR_URL}")
 
     # Set up file logging
     agent_log_path = run_dir / "agent_debug.log"
